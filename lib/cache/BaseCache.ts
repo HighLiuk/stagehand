@@ -2,6 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
 import { LogLine } from "../../types/log";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { ZodType } from "zod";
 
 export interface CacheEntry {
   timestamp: number;
@@ -92,6 +94,21 @@ export class BaseCache<T extends CacheEntry> {
 
   protected createHash(data: unknown): string {
     const hash = crypto.createHash("sha256");
+    if (
+      typeof data === "object" &&
+      "response_model" in data &&
+      typeof data.response_model === "object" &&
+      "schema" in data.response_model &&
+      data.response_model.schema instanceof ZodType
+    ) {
+      data = {
+        ...data,
+        response_model: {
+          ...data.response_model,
+          schema: zodToJsonSchema(data.response_model.schema),
+        },
+      };
+    }
     return hash.update(JSON.stringify(data)).digest("hex");
   }
 
